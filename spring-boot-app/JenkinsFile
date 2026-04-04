@@ -15,19 +15,21 @@ pipeline {
 
     stage('Diagnostics') {
       steps {
-        sh 'java -version'
-        sh 'mvn -version'
-        sh 'git --version'
-        sh 'buildah version'
-        sh 'buildah info || true'
+        sh '''
+          java -version
+          mvn -version
+          git --version
+          buildah version
+          pwd
+          ls -la
+          find . -maxdepth 3 -name pom.xml -o -name Dockerfile -o -name deployment.yml | sort
+        '''
       }
     }
 
     stage('Build and Test') {
       steps {
-        dir('spring-boot-app') {
-          sh 'mvn -B clean package'
-        }
+        sh 'mvn -B -f spring-boot-app/pom.xml clean package'
       }
     }
 
@@ -38,40 +40,36 @@ pipeline {
           usernameVariable: 'DOCKER_USER',
           passwordVariable: 'DOCKER_PASS'
         )]) {
-          dir('spring-boot-app') {
-            sh '''
-              set -euo pipefail
+          sh '''
+            set -euo pipefail
 
-              export REGISTRY_AUTH_FILE="$WORKSPACE/auth.json"
+            export REGISTRY_AUTH_FILE="$WORKSPACE/auth.json"
 
-              printf '%s' "$DOCKER_PASS" | \
-                buildah login \
-                  --authfile "$REGISTRY_AUTH_FILE" \
-                  --username "$DOCKER_USER" \
-                  --password-stdin \
-                  docker.io
-
-              buildah bud \
-                --storage-driver vfs \
-                --isolation chroot \
-                -t "${REGISTRY_IMAGE}:${BUILD_NUMBER}" \
-                -t "${REGISTRY_IMAGE}:v1.0" \
-                -f Dockerfile \
-                .
-
-              buildah push \
+            printf '%s' "$DOCKER_PASS" | \
+              buildah login \
                 --authfile "$REGISTRY_AUTH_FILE" \
-                "${REGISTRY_IMAGE}:${BUILD_NUMBER}" \
-                "docker://${REGISTRY_IMAGE}:${BUILD_NUMBER}"
+                --username "$DOCKER_USER" \
+                --password-stdin \
+                docker.io
 
-              buildah push \
-                --authfile "$REGISTRY_AUTH_FILE" \
-                "${REGISTRY_IMAGE}:v1.0" \
-                "docker://${REGISTRY_IMAGE}:v1.0"
+            buildah bud \
+              --storage-driver vfs \
+              --isolation chroot \
+              -t "${REGISTRY_IMAGE}:${BUILD_NUMBER}" \
+              -t "${REGISTRY_IMAGE}:v1.0" \
+              -f spring-boot-app/Dockerfile \
+              spring-boot-app
 
-              rm -f "$REGISTRY_AUTH_FILE"
-            '''
-          }
+            buildah push \
+              --authfile "$REGISTRY_AUTH_FILE" \
+              "${REGISTRY_IMAGE}:${BUILD_NUMBER}" \
+              "docker://${REGISTRY_IMAGE}:${BUILD_NUMBER}"
+
+            buildah push \
+              --authfile "$REGISTRY_AUTH_FILE" \
+              "${REGISTRY_IMAGE}:v1.0" \
+              "docker://${REGISTRY_IMAGE}:v1.0"
+          '''
         }
       }
     }
