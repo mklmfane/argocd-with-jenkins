@@ -52,6 +52,10 @@ pipeline {
                 --password-stdin \
                 docker.io
 
+              cat /etc/subuid || true
+              cat /etc/subgid || true
+              getcap /usr/bin/newuidmap /usr/bin/newgidmap || true
+
             buildah bud \
               --storage-driver vfs \
               --isolation chroot \

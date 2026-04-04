@@ -1,4 +1,4 @@
-FROM jenkins/inbound-agent:latest
+FROM jenkins/inbound-agent:latest-jdk17
 
 USER root
 
@@ -10,10 +10,13 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     buildah \
     uidmap \
+    libcap2-bin \
  && touch /etc/subuid /etc/subgid \
- && chmod g=u /etc/subuid /etc/subgid /etc/passwd \
  && echo 'jenkins:100000:65536' > /etc/subuid \
  && echo 'jenkins:100000:65536' > /etc/subgid \
+ && setcap cap_setuid+ep /usr/bin/newuidmap \
+ && setcap cap_setgid+ep /usr/bin/newgidmap \
+ && chmod u-s /usr/bin/newuidmap /usr/bin/newgidmap \
  && mkdir -p /home/jenkins/.config/containers \
  && mkdir -p /home/jenkins/.local/share/containers/storage \
  && chown -R jenkins:jenkins /home/jenkins/.config /home/jenkins/.local \

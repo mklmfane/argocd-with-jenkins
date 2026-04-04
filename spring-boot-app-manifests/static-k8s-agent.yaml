@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: static-k8s-agent
+  namespace: jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: static-k8s-agent
+  template:
+    metadata:
+      labels:
+        app: static-k8s-agent
+    spec:
+      serviceAccountName: jenkins-agent
+      containers:
+        - name: jnlp
+          image:  saragoza68/jenkins-inbound-agent-buildah:1.0
+          imagePullPolicy: Always
+          env:
+            - name: JENKINS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: static-k8s-agent-secret
+                  key: JENKINS_SECRET
+            - name: HOME
+              value: /home/jenkins
+          args:
+            - "-url"
+            - "http://jenkins.jenkins.svc.cluster.local:8087/"
+            - "-name"
+            - "static-k8s-agent"
+            - "-secret"
+            - "$(JENKINS_SECRET)"
+            - "-webSocket"
+            - "-workDir"
+            - "/home/jenkins/agent"
+          volumeMounts:
+            - name: buildah-storage
+              mountPath: /home/jenkins/.local/share/containers/storage
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+      volumes:
+        - name: buildah-storage
+          emptyDir: {}
