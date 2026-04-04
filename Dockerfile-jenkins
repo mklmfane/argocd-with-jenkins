@@ -1,0 +1,24 @@
+FROM jenkins/inbound-agent:latest
+
+USER root
+
+RUN apt-get update && apt-get install -y \
+    maven \
+    git \
+    curl \
+    sed \
+    ca-certificates \
+    buildah \
+    uidmap \
+ && touch /etc/subuid /etc/subgid \
+ && chmod g=u /etc/subuid /etc/subgid /etc/passwd \
+ && echo 'jenkins:100000:65536' > /etc/subuid \
+ && echo 'jenkins:100000:65536' > /etc/subgid \
+ && mkdir -p /home/jenkins/.config/containers \
+ && mkdir -p /home/jenkins/.local/share/containers/storage \
+ && chown -R jenkins:jenkins /home/jenkins/.config /home/jenkins/.local \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV HOME=/home/jenkins
+
+USER jenkins
