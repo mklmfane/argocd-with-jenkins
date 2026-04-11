@@ -1,10 +1,6 @@
 pipeline {
   agent { label 'static-k8s-agent' }
 
-  triggers {
-    pollSCM('H/1 * * * *')
-  }
-
   environment {
     REGISTRY_IMAGE = 'docker.io/saragoza68/spring-boot-app'
     GIT_REPO       = 'https://github.com/mklmfane/argocd-with-jenkins.git'
@@ -13,10 +9,10 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        git branch: 'main', poll: true, url: "${GIT_REPO}"
+        checkout scm
       }
     }
-
+    
     stage('Skip self-generated commit') {
       steps {
         script {

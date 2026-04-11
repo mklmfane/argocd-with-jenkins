@@ -320,24 +320,7 @@
             </executions>
           </plugin>
 
-          <plugin>
-            <groupId>com.gitlab.haynes</groupId>
-            <artifactId>libsass-maven-plugin</artifactId>
-            <version>${libsass.version}</version>
-            <configuration>
-              <inputPath>${basedir}/src/main/scss/</inputPath>
-              <outputPath>${basedir}/src/main/resources/static/resources/css/</outputPath>
-              <includePath>${project.build.directory}/webjars/META-INF/resources/webjars/bootstrap/${webjars-bootstrap.version}/scss/</includePath>
-            </configuration>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>compile</goal>
-                </goals>
-                <phase>generate-resources</phase>
-              </execution>
-            </executions>
-          </plugin>
+          
         </plugins>
       </build>
     </profile>
