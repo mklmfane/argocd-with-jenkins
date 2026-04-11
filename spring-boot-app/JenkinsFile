@@ -97,25 +97,33 @@ pipeline {
     }
 
     stage('Update Deployment Manifest') {
-      steps {
-        withCredentials([usernamePassword(
-          credentialsId: 'github-creds',
-          usernameVariable: 'GIT_USER',
-          passwordVariable: 'GIT_TOKEN'
+        steps {
+            withCredentials([usernamePassword(
+            credentialsId: 'github-creds',
+            usernameVariable: 'GIT_USER',
+            passwordVariable: 'GIT_TOKEN'
         )]) {
-          sh '''
-            set +x
-            git config user.email "mircea_constantin58@yahoo.com"
-            git config user.name "mklmfane"
+        sh '''
+        set +x
+        git config user.email "mircea_constantin58@yahoo.com"
+        git config user.name "mklmfane"
 
-            sed -i "s|image: .*|image: saragoza68/spring-boot-app:${BUILD_NUMBER}|g" spring-boot-app-manifests/deployment.yml
+        sed -i "s|image: .*|image: saragoza68/spring-boot-app:${BUILD_NUMBER}|g" spring-boot-app-manifests/deployment.yml
 
-            git add spring-boot-app-manifests/deployment.yml
-            git commit -m "[skip jenkins] Update image to ${BUILD_NUMBER}" || true
-            git push https://${GIT_USER}:${GIT_TOKEN}@github.com/mklmfane/argocd-with-jenkins.git HEAD:main
-          '''
+        echo "Changed files before commit:"
+        git status --short
+
+        git add -A
+
+        if git diff --cached --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "[skip jenkins] Update files for build ${BUILD_NUMBER}"
+          git push https://${GIT_USER}:${GIT_TOKEN}@github.com/mklmfane/argocd-with-jenkins.git HEAD:main
+        fi
+      '''
         }
-      }
+        }
     }
   }
 
