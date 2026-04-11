@@ -112,6 +112,15 @@ pipeline {
       }
     }
 
+    stage('Verify Artifact') {
+      steps {
+        sh '''
+          ls -lah spring-boot-app/target
+          test -f spring-boot-app/target/spring-petclinic-4.0.0-SNAPSHOT.jar
+        '''
+      }
+    }
+
     stage('Update Deployment Manifest') {
         steps {
             withCredentials([usernamePassword(
