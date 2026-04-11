@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: spring-boot-app
-        image: saragoza68/spring-boot-app:2
+        image: saragoza68/spring-boot-app:5
         ports:
           - containerPort: 8081
         env:
