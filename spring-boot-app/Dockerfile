@@ -1,15 +1,13 @@
-FROM docker.io/eclipse-temurin:11-jre
+FROM docker.io/eclipse-temurin:17-jre
 
 WORKDIR /app
 
-# Create a non-root user
 RUN useradd -r -u 1001 -g root appuser
 
-# Copy the jar and set ownership
-COPY --chown=1001:0 target/spring-boot-web.jar /app/app.jar
-
-# Use non-root user
-USER 1001
+COPY --chown=1001:0 target/spring-petclinic-4.0.0-SNAPSHOT.jar /app/app.jar
 
 EXPOSE 8081
-ENTRYPOINT ["java","-XX:+UseContainerSupport","-Djava.security.egd=file:/dev/./urandom","-jar","/app/app.jar","--server.port=8081"]
+
+USER 1001
+
+ENTRYPOINT ["java","-jar","/app/app.jar","--server.port=8081"]
