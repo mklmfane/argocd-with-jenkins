@@ -51,7 +51,21 @@ pipeline {
 
     stage('Build and Test') {
       steps {
-        sh 'mvn -B -f spring-boot-app/pom.xml clean package'
+        retry(2) {
+        sh '''
+          mvn -B -U -ntp -f spring-boot-app/pom.xml clean package
+        '''
+      }
+    }
+    }
+
+    stage('Maven Network Diagnostics') {
+      steps {
+        sh '''
+          env | grep -i proxy || true
+          curl -I https://repo.maven.apache.org/maven2/ || true
+        curl -I https://repo.maven.apache.org/maven2/org/graalvm/buildtools/utils/0.11.4/utils-0.11.4.jar || true
+        '''
       }
     }
 

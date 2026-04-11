@@ -1,0 +1,12 @@
+<settings>
+  <proxies>
+    <proxy>
+      <id>corp-proxy</id>
+      <active>true</active>
+      <protocol>http</protocol>
+      <host>YOUR_PROXY_HOST</host>
+      <port>YOUR_PROXY_PORT</port>
+      <nonProxyHosts>localhost|127.0.0.1|*.svc|*.cluster.local</nonProxyHosts>
+    </proxy>
+  </proxies>
+</settings>
