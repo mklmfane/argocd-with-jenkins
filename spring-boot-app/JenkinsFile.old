@@ -1,0 +1,109 @@
+pipeline {
+  agent { label 'static-k8s-agent' }
+
+  environment {
+    REGISTRY_IMAGE = 'docker.io/saragoza68/spring-boot-app'
+    GIT_REPO       = 'https://github.com/mklmfane/argocd-with-jenkins.git'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        git branch: 'main', url: "${GIT_REPO}"
+      }
+    }
+
+    stage('Diagnostics') {
+      steps {
+        sh '''
+          java -version
+          mvn -version
+          git --version
+          buildah version
+          pwd
+          ls -la
+          find . -maxdepth 3 -name pom.xml -o -name Dockerfile -o -name deployment.yml | sort
+        '''
+      }
+    }
+
+    stage('Build and Test') {
+      steps {
+        sh 'mvn -B -f spring-boot-app/pom.xml clean package'
+      }
+    }
+
+    stage('Build and Push Image with Buildah') {
+      steps {
+        withCredentials([usernamePassword(
+          credentialsId: 'dockerhub',
+          usernameVariable: 'DOCKER_USER',
+          passwordVariable: 'DOCKER_PASS'
+        )]) {
+          sh '''
+            set -euo pipefail
+
+            export REGISTRY_AUTH_FILE="$WORKSPACE/auth.json"
+
+            printf '%s' "$DOCKER_PASS" | \
+              buildah login \
+                --authfile "$REGISTRY_AUTH_FILE" \
+                --username "$DOCKER_USER" \
+                --password-stdin \
+                docker.io
+
+              cat /etc/subuid || true
+              cat /etc/subgid || true
+              getcap /usr/bin/newuidmap /usr/bin/newgidmap || true
+
+            buildah bud \
+              --storage-driver vfs \
+              --isolation chroot \
+              -t "${REGISTRY_IMAGE}:${BUILD_NUMBER}" \
+              -t "${REGISTRY_IMAGE}:v1.0" \
+              -f spring-boot-app/Dockerfile \
+              spring-boot-app
+
+            buildah push \
+              --authfile "$REGISTRY_AUTH_FILE" \
+              "${REGISTRY_IMAGE}:${BUILD_NUMBER}" \
+              "docker://${REGISTRY_IMAGE}:${BUILD_NUMBER}"
+
+            buildah push \
+              --authfile "$REGISTRY_AUTH_FILE" \
+              "${REGISTRY_IMAGE}:v1.0" \
+              "docker://${REGISTRY_IMAGE}:v1.0"
+          '''
+        }
+      }
+    }
+
+    stage('Update Deployment Manifest') {
+      steps {
+        withCredentials([usernamePassword(
+          credentialsId: 'github-creds',
+          usernameVariable: 'GIT_USER',
+          passwordVariable: 'GIT_TOKEN'
+        )]) {
+          sh '''
+            set +x
+            git config user.email "mircea_constantin58@yahoo.com"
+            git config user.name "mklmfane"
+
+            sed -i "s|image: .*|image: saragoza68/spring-boot-app:${BUILD_NUMBER}|g" spring-boot-app-manifests/deployment.yml
+
+            git add spring-boot-app-manifests/deployment.yml
+            git commit -m "Update image to ${BUILD_NUMBER}" || true
+            git push https://${GIT_USER}:${GIT_TOKEN}@github.com/mklmfane/argocd-with-jenkins.git HEAD:main
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      sh 'rm -f "$WORKSPACE/auth.json" || true'
+    }
+  }
+}

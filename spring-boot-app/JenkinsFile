@@ -1,6 +1,10 @@
 pipeline {
   agent { label 'static-k8s-agent' }
 
+  triggers {
+    pollSCM('H/1 * * * *')
+  }
+
   environment {
     REGISTRY_IMAGE = 'docker.io/saragoza68/spring-boot-app'
     GIT_REPO       = 'https://github.com/mklmfane/argocd-with-jenkins.git'
@@ -9,7 +13,25 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        git branch: 'main', url: "${GIT_REPO}"
+        git branch: 'main', poll: true, url: "${GIT_REPO}"
+      }
+    }
+
+    stage('Skip self-generated commit') {
+      steps {
+        script {
+          def commitMsg = sh(
+            script: "git log -1 --pretty=%B",
+            returnStdout: true
+          ).trim()
+
+          echo "Last commit message: ${commitMsg}"
+
+          if (commitMsg.contains('[skip jenkins]')) {
+            currentBuild.result = 'NOT_BUILT'
+            error('Skipping self-generated manifest commit')
+          }
+        }
       }
     }
 
@@ -22,7 +44,7 @@ pipeline {
           buildah version
           pwd
           ls -la
-          find . -maxdepth 3 -name pom.xml -o -name Dockerfile -o -name deployment.yml | sort
+          find . -maxdepth 3 \\( -name pom.xml -o -name Dockerfile -o -name deployment.yml \\) | sort
         '''
       }
     }
@@ -51,10 +73,6 @@ pipeline {
                 --username "$DOCKER_USER" \
                 --password-stdin \
                 docker.io
-
-              cat /etc/subuid || true
-              cat /etc/subgid || true
-              getcap /usr/bin/newuidmap /usr/bin/newgidmap || true
 
             buildah bud \
               --storage-driver vfs \
@@ -93,7 +111,7 @@ pipeline {
             sed -i "s|image: .*|image: saragoza68/spring-boot-app:${BUILD_NUMBER}|g" spring-boot-app-manifests/deployment.yml
 
             git add spring-boot-app-manifests/deployment.yml
-            git commit -m "Update image to ${BUILD_NUMBER}" || true
+            git commit -m "[skip jenkins] Update image to ${BUILD_NUMBER}" || true
             git push https://${GIT_USER}:${GIT_TOKEN}@github.com/mklmfane/argocd-with-jenkins.git HEAD:main
           '''
         }
