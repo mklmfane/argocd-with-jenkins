@@ -4,7 +4,8 @@ WORKDIR /app
 
 RUN useradd -r -u 1001 -g root appuser
 
-COPY --chown=1001:0 target/spring-petclinic-4.0.0-SNAPSHOT.jar /app/app.jar
+ARG JAR_FILE=target/spring-petclinic-4.0.0-SNAPSHOT.jar
+COPY --chown=1001:0 ${JAR_FILE} /app/app.jar
 
 EXPOSE 8081
 

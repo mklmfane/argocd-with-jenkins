@@ -72,41 +72,43 @@ pipeline {
     stage('Build and Push Image with Buildah') {
       steps {
         withCredentials([usernamePassword(
-          credentialsId: 'dockerhub',
-          usernameVariable: 'DOCKER_USER',
-          passwordVariable: 'DOCKER_PASS'
-        )]) {
-          sh '''
-            set -euo pipefail
+        credentialsId: 'dockerhub',
+        usernameVariable: 'DOCKER_USER',
+        passwordVariable: 'DOCKER_PASS'
+      )]) {
+      
+      sh '''
+        set -euo pipefail
 
-            export REGISTRY_AUTH_FILE="$WORKSPACE/auth.json"
+        export REGISTRY_AUTH_FILE="$WORKSPACE/auth.json"
 
-            printf '%s' "$DOCKER_PASS" | \
-              buildah login \
-                --authfile "$REGISTRY_AUTH_FILE" \
-                --username "$DOCKER_USER" \
-                --password-stdin \
-                docker.io
+        printf '%s' "$DOCKER_PASS" | \
+          buildah login \
+            --authfile "$REGISTRY_AUTH_FILE" \
+            --username "$DOCKER_USER" \
+            --password-stdin \
+            docker.io
 
-            buildah bud \
-              --storage-driver vfs \
-              --isolation chroot \
-              -t "${REGISTRY_IMAGE}:${BUILD_NUMBER}" \
-              -t "${REGISTRY_IMAGE}:v1.0" \
-              -f spring-boot-app/Dockerfile \
-              spring-boot-app
+        buildah bud \
+          --storage-driver vfs \
+          --isolation chroot \
+          --build-arg JAR_FILE=target/spring-petclinic-4.0.0-SNAPSHOT.jar \
+          -t "${REGISTRY_IMAGE}:${BUILD_NUMBER}" \
+          -t "${REGISTRY_IMAGE}:v1.0" \
+          -f spring-boot-app/Dockerfile \
+          spring-boot-app
 
-            buildah push \
-              --authfile "$REGISTRY_AUTH_FILE" \
-              "${REGISTRY_IMAGE}:${BUILD_NUMBER}" \
-              "docker://${REGISTRY_IMAGE}:${BUILD_NUMBER}"
+        buildah push \
+          --authfile "$REGISTRY_AUTH_FILE" \
+          "${REGISTRY_IMAGE}:${BUILD_NUMBER}" \
+          "docker://${REGISTRY_IMAGE}:${BUILD_NUMBER}"
 
-            buildah push \
-              --authfile "$REGISTRY_AUTH_FILE" \
-              "${REGISTRY_IMAGE}:v1.0" \
-              "docker://${REGISTRY_IMAGE}:v1.0"
-          '''
-        }
+        buildah push \
+          --authfile "$REGISTRY_AUTH_FILE" \
+          "${REGISTRY_IMAGE}:v1.0" \
+          "docker://${REGISTRY_IMAGE}:v1.0"
+      '''
+      }
       }
     }
 
