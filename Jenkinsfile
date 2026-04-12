@@ -5,6 +5,10 @@ pipeline {
     overrideIndexTriggers(true)
   }
 
+  triggers {
+    pollSCM('H/2 * * * *')
+  }
+
   environment {
     APP_NAME         = 'spring-boot-app'
     APP_NAMESPACE    = 'default'
@@ -168,8 +172,6 @@ spec:
 EOF
 
             kubectl rollout status deployment/${APP_NAME} -n "${APP_NAMESPACE}" --timeout=180s
-            kubectl get pods -n "${APP_NAMESPACE}" -l app="${APP_NAME}" -o wide
-            kubectl get svc  -n "${APP_NAMESPACE}" "${APP_NAME}" -o wide
           '''
         }
       }
