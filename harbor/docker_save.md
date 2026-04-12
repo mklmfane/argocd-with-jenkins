@@ -42,7 +42,6 @@ docker run --rm `
   -p Harbor12345 `
   host.docker.internal:30080
 
-
 docker run --rm `
   -v "${PWD}:/work" `
   quay.io/skopeo/stable:latest `

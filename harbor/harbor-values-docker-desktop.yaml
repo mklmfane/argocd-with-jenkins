@@ -2,6 +2,9 @@ expose:
   type: nodePort
   tls:
     enabled: false
+    certSource: auto
+    auto:
+      commonName: harbor
   nodePort:
     name: harbor
     ports:
@@ -9,8 +12,8 @@ expose:
         port: 80
         nodePort: 30080
 
-externalURL: http://172.18.0.8:30080
 
+externalURL: http://harbor.harbor.svc.cluster.local
 harborAdminPassword: "Harbor12345"
 
 persistence:
@@ -100,7 +103,11 @@ database:
       limits:
         cpu: 300m
         memory: 512Mi
-    shmSizeLimit: 256Mi
+    shmSizeLimit: 512Mi
+    livenessProbe:
+      timeoutSeconds: 5
+    readinessProbe:
+      timeoutSeconds: 5
 
 redis:
   internal:
@@ -113,4 +120,4 @@ redis:
         memory: 256Mi
 
 metrics:
-  enabled: true
+  enabled: false
