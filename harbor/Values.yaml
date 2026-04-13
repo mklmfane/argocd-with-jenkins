@@ -1,20 +1,38 @@
+#expose:
+#  type: nodePort
+#  tls:
+#    enabled: false
+#    certSource: auto
+#    auto:
+#      commonName: harbor
+#  nodePort:
+#    name: harbor
+#    ports:
+#      http:
+#        port: 80
+#        nodePort: 30080
+
 expose:
-  type: nodePort
+  type: clusterIP
   tls:
     enabled: false
     certSource: auto
     auto:
       commonName: harbor
-  nodePort:
+  clusterIP:
     name: harbor
+    staticClusterIP: ""
     ports:
-      http:
-        port: 80
-        nodePort: 30080
-
+      httpPort: 8085
+      httpsPort: 443
+    annotations: {}
+    labels: {}
 
 externalURL: http://harbor.harbor.svc.cluster.local
-harborAdminPassword: "Harbor12345"
+
+# Use existing secret instead of plain text password
+existingSecretAdminPassword: harbor-admin-secret
+existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD
 
 persistence:
   enabled: true

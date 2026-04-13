@@ -1,38 +1,17 @@
 pipeline {
-  agent {
-    kubernetes {
-      defaultContainer 'tools'
-      yaml """
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: k8s-smoke
-spec:
-  serviceAccountName: jenkins-agent
-  containers:
-    - name: tools
-      image: alpine:3.20
-      imagePullPolicy: IfNotPresent
-      securityContext:
-        runAsUser: 0
-      command:
-        - sh
-        - -c
-        - sleep 99d
-      tty: true
-"""
-    }
-  }
+  agent { label 'static-k8s-agent' }
 
   options {
-    disableConcurrentBuilds()
-    timeout(time: 15, unit: 'MINUTES')
+    overrideIndexTriggers(true)
+  }
+
+  triggers {
+    pollSCM('H/2 * * * *')
   }
 
   environment {
     APP_NAME        = 'spring-boot-app'
-    APP_NAMESPACE   = 'spring-boot-dev'
+    APP_NAMESPACE   = 'default'
     CONTAINER_PORT  = '8081'
     HARBOR_REGISTRY = 'harbor.harbor.svc.cluster.local'
     HARBOR_PROJECT  = 'library'
@@ -44,23 +23,27 @@ spec:
   }
 
   stages {
-    stage('Prepare tools') {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Install kubectl') {
       steps {
         sh '''
           set -eux
 
-          mkdir -p "${LOCAL_BIN}"
+          mkdir -p "$LOCAL_BIN"
 
-          apk add --no-cache curl ca-certificates
-
-          if [ ! -x "${LOCAL_BIN}/kubectl" ]; then
-            KVER="$(curl -fsSL https://dl.k8s.io/release/stable.txt)"
-            curl -fsSL -o "${LOCAL_BIN}/kubectl" \
-              "https://dl.k8s.io/release/${KVER}/bin/linux/amd64/kubectl"
-            chmod +x "${LOCAL_BIN}/kubectl"
+          if [ ! -x "$LOCAL_BIN/kubectl" ]; then
+            KUBECTL_VERSION="$(curl -L -s https://dl.k8s.io/release/stable.txt)"
+            curl -L --fail --retry 3 -o "$LOCAL_BIN/kubectl" \
+              "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+            chmod +x "$LOCAL_BIN/kubectl"
           fi
 
-          kubectl version --client=true
+          "$LOCAL_BIN/kubectl" version --client=true
         '''
       }
     }
@@ -95,8 +78,8 @@ users:
     token: ${TOKEN}
 EOF
 
+          kubectl version --client=true
           kubectl get ns
-          kubectl create ns "${APP_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
         '''
       }
     }
@@ -113,7 +96,7 @@ EOF
       }
     }
 
-	stage('Diagnostics') {
+    stage('Diagnostics') {
       steps {
         sh '''
           set -eux

@@ -1,3 +1,5 @@
+kubectl port-forward -n harbor --address 0.0.0.0 svc/harbor 8085:8085
+
 docker save saragoza68/spring-boot-app:10 -o spring-boot-app-10.tar
 
 docker run --rm `

@@ -1,0 +1,81 @@
+controller:
+  installPlugins:
+    - kubernetes:4423.vb_59f230b_ce53
+    - workflow-aggregator:608.v67378e9d3db_1
+    - git:5.10.1
+    - configuration-as-code:2061.vc08919f7fc37
+    - pipeline-model-definition:2.2277.v00573e73ddf1
+
+  #serviceType: LoadBalancer
+  #servicePort: 8087
+  #targetPort: 8080
+
+  serviceType: ClusterIP
+  
+  # Must be inside your MetalLB pool 172.18.255.3-172.18.255.50
+  #loadBalancerIP: 172.18.255.3
+
+  #jenkinsUrl: "http://172.18.255.3:8087"
+  #jenkinsUrl: "http://localhost:55007" ## For port forwarding on "%USERPROFILE%\go\bin\cloud-provider-kind.exe" --enable-lb-port-mapping
+
+  numExecutors: 0
+  agentListenerEnabled: false
+  initializeOnce: true
+
+  JCasC:
+    defaultConfig: true
+    configScripts:
+      kubernetes-websocket: |
+        jenkins:
+          clouds:
+            - kubernetes:
+                name: "kubernetes"
+                serverUrl: "https://kubernetes.default.svc"
+                namespace: "jenkins"
+                jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+                jenkinsTunnel: ""
+                webSocket: true
+                containerCapStr: "10"
+                templates:
+                  - name: "default"
+                    namespace: "jenkins"
+                    label: "k8s"
+                    serviceAccount: "jenkins-agent"
+                    nodeUsageMode: NORMAL
+                    containers:
+                      - name: "jnlp"
+                        image: "jenkins/inbound-agent:3355.v388858a_47b_33-3-jdk21"
+                        workingDir: "/home/jenkins/agent"
+
+persistence:
+  enabled: true
+  storageClass: standard
+  size: 10Gi
+
+rbac:
+  create: true
+
+serviceAccount:
+  create: true
+  name: jenkins
+
+serviceAccountAgent:
+  create: true
+  name: jenkins-agent
+
+agent:
+  enabled: true
+  websocket: true
+  namespace: jenkins
+  customJenkinsLabels:
+    - k8s
+  image:
+    repository: jenkins/inbound-agent
+    tag: "3355.v388858a_47b_33-17"
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
