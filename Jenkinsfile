@@ -341,8 +341,8 @@ EOF
             test -d "${WORKSPACE}/.git"
 
             git config --global --add safe.directory "${WORKSPACE}"
-            git -C "${WORKSPACE}" config user.name "jenkins"
-            git -C "${WORKSPACE}" config user.email "jenkins@local"
+            git -C "${WORKSPACE}" config user.name "mklmfane"
+            git -C "${WORKSPACE}" config user.email "mircea_constantin58@yahoo.com"
 
             git -C "${WORKSPACE}" remote set-url origin "${REPO_URL}"
             git -C "${WORKSPACE}" fetch origin "${GITOPS_BRANCH}"
