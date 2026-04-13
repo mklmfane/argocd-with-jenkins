@@ -40,6 +40,7 @@ spec:
     disableConcurrentBuilds()
     timeout(time: 30, unit: 'MINUTES')
     overrideIndexTriggers(true)
+    skipDefaultCheckout(true)
   }
 
   environment {
@@ -57,6 +58,7 @@ spec:
     MANIFEST_FILE   = 'spring-boot-app-manifests/deployment.yml'
     GITOPS_BRANCH   = 'main'
     REPO_URL        = 'https://github.com/mklmfane/argocd-with-jenkins.git'
+    GIT_CREDENTIALS = 'github-creds'
 
     KUBECONFIG      = "${WORKSPACE}/kubeconfig"
     LOCAL_BIN       = "${WORKSPACE}/bin"
@@ -247,7 +249,7 @@ EOF
             passwordVariable: 'HARBOR_PASS'
           ),
           usernamePassword(
-            credentialsId: 'github-creds',
+            credentialsId: "${GIT_CREDENTIALS}",
             usernameVariable: 'GIT_USER',
             passwordVariable: 'GIT_PAT'
           )
@@ -273,13 +275,17 @@ EOF
               --type merge \
               -p '{"imagePullSecrets":[{"name":"harbor-registry"}]}'
 
-            sed -i -E "s#(^[[:space:]]*image:[[:space:]]*).+#\\\\1${FULL_IMAGE}#" "${MANIFEST_FILE}"
+            git config user.name "jenkins"
+            git config user.email "jenkins@local"
+
+            git remote set-url origin "${REPO_URL}"
+            git fetch origin "${GITOPS_BRANCH}"
+            git checkout -B "${GITOPS_BRANCH}" "origin/${GITOPS_BRANCH}"
+
+            sed -i -E "s#(^[[:space:]]*image:[[:space:]]*).+#\\1${FULL_IMAGE}#" "${MANIFEST_FILE}"
 
             echo "Updated manifest:"
             grep -n "image:" "${MANIFEST_FILE}"
-
-            git config user.name "mklmfane"
-            git config user.email "mircea_constantin58@yahoo.com"
 
             git add "${MANIFEST_FILE}"
 
