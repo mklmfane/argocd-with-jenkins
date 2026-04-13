@@ -3,15 +3,7 @@
   --create-namespace \
   -f argocd/Values.yaml
 
-#Release "argocd" does not exist. Installing it now.
-#NAME: argocd
-#LAST DEPLOYED: Mon Apr 13 22:54:28 2026
-#NAMESPACE: argocd
-#STATUS: deployed
-#REVISION: 1
-#TEST SUITE: None
-#NOTES:
-In order to access the server UI you have the following options:
+# In order to access the server UI you have the following options:
 
 kubectl port-forward service/argocd-server -n argocd 8080:443
 

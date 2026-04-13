@@ -4,14 +4,14 @@ metadata:
   name: spring-boot-app
   namespace: argocd
 spec:
-  project: default
+  project: spring-boot-app-project
   source:
     repoURL: https://github.com/mklmfane/argocd-with-jenkins.git
     targetRevision: main
     path: spring-boot-app-manifests
   destination:
     server: https://kubernetes.default.svc
-    namespace: default
+    namespace: spring-boot-dev
   syncPolicy:
     automated:
       prune: true
