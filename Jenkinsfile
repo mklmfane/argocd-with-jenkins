@@ -278,8 +278,8 @@ EOF
             echo "Updated manifest:"
             grep -n "image:" "${MANIFEST_FILE}"
 
-            git config user.name "jenkins"
-            git config user.email "jenkins@local"
+            git config user.name "mklmfane"
+            git config user.email "mircea_constantin58@yahoo.com"
 
             git add "${MANIFEST_FILE}"
 
