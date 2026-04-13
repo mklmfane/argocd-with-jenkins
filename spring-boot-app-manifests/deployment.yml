@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: spring-boot-app
-        image: saragoza68/spring-boot-app:9
+        image: harbor.harbor.svc.cluster.local:8085/library/spring-boot-app:10
         ports:
           - containerPort: 8081
         env:
