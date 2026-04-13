@@ -309,7 +309,7 @@ EOF
             passwordVariable: 'HARBOR_PASS'
           ),
           usernamePassword(
-            credentialsId: "${GIT_CREDENTIALS}",
+            credentialsId: 'github-creds',
             usernameVariable: 'GIT_USER',
             passwordVariable: 'GIT_PAT'
           )
