@@ -28,7 +28,7 @@ spec:
               value: /home/jenkins
           args:
             - "-url"
-            - "http://jenkins.jenkins.svc.cluster.local:8087/"
+            - "http://jenkins.jenkins.svc.cluster.local:8080/"
             - "-name"
             - "static-k8s-agent"
             - "-secret"
