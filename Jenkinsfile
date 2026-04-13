@@ -63,6 +63,8 @@ spec:
     KUBECONFIG      = "${WORKSPACE}/kubeconfig"
     LOCAL_BIN       = "${WORKSPACE}/bin"
     PATH            = "${WORKSPACE}/bin:${PATH}"
+
+    SKIP_PIPELINE   = 'false'
   }
 
   stages {
@@ -72,7 +74,46 @@ spec:
       }
     }
 
+    stage('Preflight') {
+      steps {
+        script {
+          def skip = sh(
+            script: """
+              set -eu
+
+              COMMIT_MSG="\$(git -C "${WORKSPACE}" log -1 --pretty=%s)"
+              CHANGED_FILES="\$(git -C "${WORKSPACE}" diff-tree --no-commit-id --name-only -r HEAD | tr '\\n' ' ' | sed 's/[[:space:]]*\$//')"
+
+              echo "Last commit message: \$COMMIT_MSG"
+              echo "Changed files: \$CHANGED_FILES"
+
+              if echo "\$COMMIT_MSG" | grep -Eq '^ci: update ${APP_NAME} image to '; then
+                if [ "\$CHANGED_FILES" = "${MANIFEST_FILE}" ]; then
+                  echo true
+                else
+                  echo false
+                fi
+              else
+                echo false
+              fi
+            """,
+            returnStdout: true
+          ).trim()
+
+          env.SKIP_PIPELINE = skip
+
+          if (env.SKIP_PIPELINE == 'true') {
+            currentBuild.description = 'Skipped self-triggered manifest-only commit'
+            echo 'Skipping pipeline because this commit was created by Jenkins only to update the GitOps manifest.'
+          }
+        }
+      }
+    }
+
     stage('Install kubectl') {
+      when {
+        expression { env.SKIP_PIPELINE != 'true' }
+      }
       steps {
         sh '''
           set -eux
@@ -100,6 +141,9 @@ spec:
     }
 
     stage('Create in-cluster kubeconfig') {
+      when {
+        expression { env.SKIP_PIPELINE != 'true' }
+      }
       steps {
         sh '''
           set -eux
@@ -137,6 +181,9 @@ EOF
     }
 
     stage('Check RBAC') {
+      when {
+        expression { env.SKIP_PIPELINE != 'true' }
+      }
       steps {
         sh '''
           set -eux
@@ -150,6 +197,9 @@ EOF
     }
 
     stage('Diagnostics') {
+      when {
+        expression { env.SKIP_PIPELINE != 'true' }
+      }
       steps {
         sh '''
           set -eux
@@ -171,6 +221,9 @@ EOF
     }
 
     stage('Build and Test') {
+      when {
+        expression { env.SKIP_PIPELINE != 'true' }
+      }
       steps {
         retry(2) {
           sh '''
@@ -182,6 +235,9 @@ EOF
     }
 
     stage('Verify Artifact') {
+      when {
+        expression { env.SKIP_PIPELINE != 'true' }
+      }
       steps {
         sh '''
           set -eux
@@ -192,6 +248,9 @@ EOF
     }
 
     stage('Build and Push Image to Harbor') {
+      when {
+        expression { env.SKIP_PIPELINE != 'true' }
+      }
       steps {
         withCredentials([usernamePassword(
           credentialsId: 'harbor-creds',
@@ -241,6 +300,9 @@ EOF
     }
 
     stage('Deploy to Kubernetes') {
+      when {
+        expression { env.SKIP_PIPELINE != 'true' }
+      }
       steps {
         withCredentials([
           usernamePassword(
@@ -275,27 +337,28 @@ EOF
               --type merge \
               -p '{"imagePullSecrets":[{"name":"harbor-registry"}]}'
 
+            test -d "${WORKSPACE}/.git"
 
-            git config user.name "jenkins"
-            git config user.email "jenkins@local"
+            git -C "${WORKSPACE}" config --global user.name "jenkins"
+            git -C "${WORKSPACE}" config --global user.email "jenkins@local"
 
-            git remote set-url origin "${REPO_URL}"
-            git fetch origin "${GITOPS_BRANCH}"
-            git checkout -B "${GITOPS_BRANCH}" "origin/${GITOPS_BRANCH}"
+            git -C "${WORKSPACE}" remote set-url origin "${REPO_URL}"
+            git -C "${WORKSPACE}" fetch origin "${GITOPS_BRANCH}"
+            git -C "${WORKSPACE}" checkout -B "${GITOPS_BRANCH}" "origin/${GITOPS_BRANCH}"
 
-            sed -i -E "s#(^[[:space:]]*image:[[:space:]]*).+#\\1${FULL_IMAGE}#" "${MANIFEST_FILE}"
+            sed -i -E "s#(^[[:space:]]*image:[[:space:]]*).+#\\1${FULL_IMAGE}#" "${WORKSPACE}/${MANIFEST_FILE}"
 
             echo "Updated manifest:"
-            grep -n "image:" "${MANIFEST_FILE}"
+            grep -n "image:" "${WORKSPACE}/${MANIFEST_FILE}"
 
-            git add "${MANIFEST_FILE}"
+            git -C "${WORKSPACE}" add "${MANIFEST_FILE}"
 
-            if git diff --cached --quiet; then
+            if git -C "${WORKSPACE}" diff --cached --quiet; then
               echo "No manifest change detected."
             else
               AUTH="$(printf '%s:%s' "${GIT_USER}" "${GIT_PAT}" | base64 | tr -d '\\n')"
-              git commit -m "ci: update ${APP_NAME} image to ${BUILD_NUMBER}"
-              git -c http.extraHeader="Authorization: Basic ${AUTH}" push origin HEAD:${GITOPS_BRANCH}
+              git -C "${WORKSPACE}" commit -m "ci: update ${APP_NAME} image to ${BUILD_NUMBER}"
+              git -C "${WORKSPACE}" -c http.extraHeader="Authorization: Basic ${AUTH}" push origin HEAD:${GITOPS_BRANCH}
             fi
 
             for i in $(seq 1 60); do
