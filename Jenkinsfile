@@ -275,6 +275,7 @@ EOF
               --type merge \
               -p '{"imagePullSecrets":[{"name":"harbor-registry"}]}'
 
+
             git config user.name "jenkins"
             git config user.email "jenkins@local"
 
