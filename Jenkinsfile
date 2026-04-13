@@ -103,41 +103,45 @@ spec:
     }
 
     stage('Preflight') {
-      steps {
+        steps {
+            sh '''
+                set -eux
+                git config --global --add safe.directory "${WORKSPACE}"
+            '''
         script {
-          def skip = sh(
-            script: """
-              set -eu
+            def skip = sh(
+                script: """
+                    set -eu
 
-              COMMIT_MSG="\$(git -C "${WORKSPACE}" log -1 --pretty=%s)"
-              CHANGED_FILES="\$(git -C "${WORKSPACE}" diff-tree --no-commit-id --name-only -r HEAD | tr '\\n' ' ' | sed 's/[[:space:]]*\$//')"
+                    COMMIT_MSG="\$(git -C "${WORKSPACE}" log -1 --pretty=%s)"
+                    CHANGED_FILES="\$(git -C "${WORKSPACE}" diff-tree --no-commit-id --name-only -r HEAD | tr '\\n' ' ' | sed 's/[[:space:]]*\$//')"
 
-              echo "Last commit message: \$COMMIT_MSG"
-              echo "Changed files: \$CHANGED_FILES"
+                    echo "Last commit message: \$COMMIT_MSG"
+                    echo "Changed files: \$CHANGED_FILES"
 
-              if echo "\$COMMIT_MSG" | grep -Eq '^ci: update ${APP_NAME} image to '; then
-                if [ "\$CHANGED_FILES" = "${MANIFEST_FILE}" ]; then
-                  echo true
-                else
-                  echo false
-                fi
-              else
-                echo false
-              fi
-            """,
-            returnStdout: true
-          ).trim()
+                    if echo "\$COMMIT_MSG" | grep -Eq '^ci: update ${APP_NAME} image to '; then
+                        if [ "\$CHANGED_FILES" = "${MANIFEST_FILE}" ]; then
+                            echo true
+                        else
+                            echo false
+                        fi
+                    else
+                    echo false
+                    fi
+                """,
+                returnStdout: true
+            ).trim()
 
-          env.SKIP_PIPELINE = skip
+            env.SKIP_PIPELINE = skip
 
-          if (env.SKIP_PIPELINE == 'true') {
-            currentBuild.description = 'Skipped self-triggered manifest-only commit'
-            echo 'Skipping pipeline because this commit was created by Jenkins only to update the GitOps manifest.'
-          }
+            if (env.SKIP_PIPELINE == 'true') {
+                currentBuild.description = 'Skipped self-triggered manifest-only commit'
+                echo 'Skipping pipeline because this commit was created by Jenkins only to update the GitOps manifest.'
+            }
+            }
         }
-      }
     }
-
+    
     stage('Create in-cluster kubeconfig') {
       when {
         expression { env.SKIP_PIPELINE != 'true' }
