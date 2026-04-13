@@ -74,6 +74,34 @@ spec:
       }
     }
 
+    stage('Install kubectl') {
+      steps {
+        sh '''
+          set -eux
+
+          mkdir -p "${LOCAL_BIN}"
+
+          apk add --no-cache \
+            bash \
+            ca-certificates \
+            curl \
+            git \
+            maven \
+            openjdk17-jdk
+
+          if [ ! -x "${LOCAL_BIN}/kubectl" ]; then
+            KUBECTL_VERSION="$(curl -fsSL https://dl.k8s.io/release/stable.txt)"
+            curl -fsSL -o "${LOCAL_BIN}/kubectl" \
+              "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+            chmod +x "${LOCAL_BIN}/kubectl"
+          fi
+
+          "${LOCAL_BIN}/kubectl" version --client=true
+          git --version
+        '''
+      }
+    }
+
     stage('Preflight') {
       steps {
         script {
@@ -107,36 +135,6 @@ spec:
             echo 'Skipping pipeline because this commit was created by Jenkins only to update the GitOps manifest.'
           }
         }
-      }
-    }
-
-    stage('Install kubectl') {
-      when {
-        expression { env.SKIP_PIPELINE != 'true' }
-      }
-      steps {
-        sh '''
-          set -eux
-
-          mkdir -p "${LOCAL_BIN}"
-
-          apk add --no-cache \
-            bash \
-            ca-certificates \
-            curl \
-            git \
-            maven \
-            openjdk17-jdk
-
-          if [ ! -x "${LOCAL_BIN}/kubectl" ]; then
-            KUBECTL_VERSION="$(curl -fsSL https://dl.k8s.io/release/stable.txt)"
-            curl -fsSL -o "${LOCAL_BIN}/kubectl" \
-              "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-            chmod +x "${LOCAL_BIN}/kubectl"
-          fi
-
-          "${LOCAL_BIN}/kubectl" version --client=true
-        '''
       }
     }
 
@@ -339,8 +337,8 @@ EOF
 
             test -d "${WORKSPACE}/.git"
 
-            git -C "${WORKSPACE}" config --global user.name "jenkins"
-            git -C "${WORKSPACE}" config --global user.email "jenkins@local"
+            git -C "${WORKSPACE}" config user.name "jenkins"
+            git -C "${WORKSPACE}" config user.email "jenkins@local"
 
             git -C "${WORKSPACE}" remote set-url origin "${REPO_URL}"
             git -C "${WORKSPACE}" fetch origin "${GITOPS_BRANCH}"
