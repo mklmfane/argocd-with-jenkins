@@ -324,30 +324,30 @@ EOF
             IMAGE="${HARBOR_REGISTRY}/${HARBOR_PROJECT}/${APP_NAME}"
             FULL_IMAGE="${IMAGE}:${BUILD_NUMBER}"
 
-            kubectl create namespace "${APP_NAMESPACE}" \
-              --dry-run=client -o yaml | kubectl apply -f -
+            kubectl create namespace "${APP_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
 
             kubectl create secret docker-registry harbor-registry \
-              --namespace "${APP_NAMESPACE}" \
-              --docker-server="${HARBOR_REGISTRY}" \
-              --docker-username="${HARBOR_USER}" \
-              --docker-password="${HARBOR_PASS}" \
-              --dry-run=client -o yaml | kubectl apply -f -
+                --namespace "${APP_NAMESPACE}" \
+                --docker-server="${HARBOR_REGISTRY}" \
+                --docker-username="${HARBOR_USER}" \
+                --docker-password="${HARBOR_PASS}" \
+                --dry-run=client -o yaml | kubectl apply -f -
 
             kubectl patch serviceaccount default \
-              -n "${APP_NAMESPACE}" \
-              --type merge \
-              -p '{"imagePullSecrets":[{"name":"harbor-registry"}]}'
+                -n "${APP_NAMESPACE}" \
+                --type merge \
+                -p '{"imagePullSecrets":[{"name":"harbor-registry"}]}'
 
             test -d "${WORKSPACE}/.git"
 
             git config --global --add safe.directory "${WORKSPACE}"
             git -C "${WORKSPACE}" config user.name "jenkins"
-            git -C "${WORKSPACE}" config user.email "jenkins@local"    
+            git -C "${WORKSPACE}" config user.email "jenkins@local"
 
             git -C "${WORKSPACE}" remote set-url origin "${REPO_URL}"
             git -C "${WORKSPACE}" fetch origin "${GITOPS_BRANCH}"
             git -C "${WORKSPACE}" checkout -B "${GITOPS_BRANCH}" "origin/${GITOPS_BRANCH}"
+            git -C "${WORKSPACE}" reset --hard "origin/${GITOPS_BRANCH}"
 
             sed -i -E "s#(^[[:space:]]*image:[[:space:]]*).+#\\1${FULL_IMAGE}#" "${WORKSPACE}/${MANIFEST_FILE}"
 
@@ -357,11 +357,11 @@ EOF
             git -C "${WORKSPACE}" add "${MANIFEST_FILE}"
 
             if git -C "${WORKSPACE}" diff --cached --quiet; then
-              echo "No manifest change detected."
+                echo "No manifest change detected."
             else
-              AUTH="$(printf '%s:%s' "${GIT_USER}" "${GIT_PAT}" | base64 | tr -d '\\n')"
-              git -C "${WORKSPACE}" commit -m "ci: update ${APP_NAME} image to ${BUILD_NUMBER}"
-              git -C "${WORKSPACE}" -c http.extraHeader="Authorization: Basic ${AUTH}" push origin HEAD:${GITOPS_BRANCH}
+                AUTH="$(printf '%s:%s' "${GIT_USER}" "${GIT_PAT}" | base64 | tr -d '\\n')"
+                git -C "${WORKSPACE}" commit -m "ci: update ${APP_NAME} image to ${BUILD_NUMBER}"
+                git -C "${WORKSPACE}" -c http.extraHeader="Authorization: Basic ${AUTH}" push origin HEAD:${GITOPS_BRANCH}
             fi
 
             for i in $(seq 1 60); do
