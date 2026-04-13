@@ -48,7 +48,7 @@ spec:
     APP_NAMESPACE   = 'spring-boot-dev'
     CONTAINER_PORT  = '8081'
 
-    HARBOR_REGISTRY = 'harbor.harbor.svc.cluster.local:8085'
+    HARBOR_REGISTRY = '172.18.0.5:30080'
     HARBOR_PROJECT  = 'library'
 
     MAVEN_POM       = 'spring-boot-app/pom.xml'
